@@ -1,0 +1,1394 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BookDialog – Sistema de Diálogo com Livros Digitais</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.ico" />
+  <style>
+    /* ── Reset & Tokens ─────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:       #0d0f17;
+      --bg2:      #131622;
+      --bg3:      #1a1e30;
+      --border:   rgba(255,255,255,0.07);
+      --purple:   #7c3aed;
+      --purple2:  #9f5fff;
+      --cyan:     #06b6d4;
+      --gold:     #f59e0b;
+      --green:    #10b981;
+      --red:      #ef4444;
+      --text:     #e2e8f0;
+      --text2:    #94a3b8;
+      --text3:    #64748b;
+      --radius:   14px;
+      --shadow:   0 8px 32px rgba(0,0,0,0.4);
+    }
+    html, body { height: 100%; font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); overflow-x: hidden; }
+    a { color: var(--cyan); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    button { cursor: pointer; font-family: inherit; border: none; outline: none; }
+    input, select, textarea { font-family: inherit; outline: none; }
+
+    /* ── Partículas ─────────────────────────────────── */
+    #particles { position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
+    .pt { position: absolute; border-radius: 50%; opacity: 0.35;
+          animation: float linear infinite; bottom: -10px; }
+    @keyframes float {
+      0%   { transform: translateY(0) rotate(0deg); opacity: 0.35; }
+      100% { transform: translateY(-110vh) rotate(720deg); opacity: 0; }
+    }
+
+    /* ── Telas ──────────────────────────────────────── */
+    .screen { display: none; position: relative; z-index: 1; min-height: 100vh; }
+    .screen.active { display: flex; flex-direction: column; }
+
+    /* ── Glass Card ─────────────────────────────────── */
+    .glass {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+      backdrop-filter: blur(16px);
+      border-radius: var(--radius);
+    }
+
+    /* ════════════════════════════════════════════════
+       TELA 1 — API KEY
+    ════════════════════════════════════════════════ */
+    #screen-apikey {
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .apikey-card {
+      width: 100%;
+      max-width: 480px;
+      padding: 40px 36px;
+      box-shadow: var(--shadow);
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 28px;
+    }
+    .brand-icon {
+      width: 52px; height: 52px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, var(--purple), var(--cyan));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 24px; flex-shrink: 0;
+    }
+    .brand-name { font-family: 'Playfair Display', serif; font-size: 22px; font-weight: 700; }
+    .brand-sub  { font-size: 12px; color: var(--text2); margin-top: 2px; }
+
+    .divider { height: 1px; background: var(--border); margin: 4px 0 24px; }
+
+    .card-title { font-size: 18px; font-weight: 700; margin-bottom: 6px; }
+    .card-desc  { font-size: 13px; color: var(--text2); line-height: 1.6; margin-bottom: 22px; }
+
+    .field { margin-bottom: 16px; }
+    .field label {
+      display: block; font-size: 12px; font-weight: 600;
+      color: var(--text2); margin-bottom: 7px; letter-spacing: .5px;
+      text-transform: uppercase;
+    }
+    .field label .req { color: var(--red); margin-left: 3px; }
+    .input-wrap { position: relative; }
+    .input-wrap input, .field input, .field select {
+      width: 100%;
+      background: var(--bg2);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 10px;
+      padding: 12px 16px;
+      color: var(--text);
+      font-size: 14px;
+      transition: border-color .2s;
+    }
+    .input-wrap input { padding-right: 44px; }
+    .input-wrap input:focus, .field input:focus, .field select:focus {
+      border-color: var(--purple);
+    }
+    .eye-btn {
+      position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+      background: none; color: var(--text2); font-size: 15px; padding: 4px;
+    }
+    .eye-btn:hover { color: var(--text); }
+    .field select { appearance: none; cursor: pointer; }
+
+    .status-box {
+      border-radius: 10px; padding: 11px 14px;
+      font-size: 13px; margin-bottom: 16px; display: none;
+      align-items: center; gap: 9px;
+    }
+    .status-box.info    { display: flex; background: rgba(6,182,212,.12); color: var(--cyan); border: 1px solid rgba(6,182,212,.25); }
+    .status-box.success { display: flex; background: rgba(16,185,129,.12); color: var(--green); border: 1px solid rgba(16,185,129,.25); }
+    .status-box.error   { display: flex; background: rgba(239,68,68,.12);  color: var(--red);   border: 1px solid rgba(239,68,68,.25); }
+
+    .btn-primary {
+      width: 100%;
+      padding: 13px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, var(--purple), var(--cyan));
+      color: #fff;
+      font-size: 15px;
+      font-weight: 600;
+      transition: opacity .2s, transform .1s;
+    }
+    .btn-primary:hover  { opacity: .88; }
+    .btn-primary:active { transform: scale(.98); }
+    .btn-primary:disabled { opacity: .5; cursor: not-allowed; }
+
+    .help-text {
+      margin-top: 16px;
+      font-size: 12px;
+      color: var(--text3);
+      text-align: center;
+      line-height: 1.6;
+    }
+
+    /* ════════════════════════════════════════════════
+       TELA 2 — UPLOAD
+    ════════════════════════════════════════════════ */
+    #screen-upload {
+      flex-direction: column;
+      min-height: 100vh;
+    }
+    .hero-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 18px 32px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(13,15,23,.8);
+      backdrop-filter: blur(12px);
+      position: sticky; top: 0; z-index: 10;
+    }
+    .hero-nav { display: flex; align-items: center; gap: 10px; }
+    .nav-link {
+      font-size: 13px; color: var(--text2); padding: 7px 14px; border-radius: 8px;
+      background: none; transition: background .2s, color .2s;
+    }
+    .nav-link:hover { background: rgba(255,255,255,.06); color: var(--text); text-decoration: none; }
+    .nav-btn {
+      font-size: 13px; color: var(--text2); padding: 7px 14px; border-radius: 8px;
+      background: rgba(255,255,255,.05); border: 1px solid var(--border);
+      transition: background .2s; display: flex; align-items: center; gap: 6px;
+    }
+    .nav-btn:hover { background: rgba(255,255,255,.1); color: var(--text); }
+
+    .hero-body {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 60px;
+      padding: 48px 32px;
+      flex-wrap: wrap;
+    }
+    .hero-left { max-width: 520px; flex: 1; min-width: 280px; }
+    .pill {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(124,58,237,.15); border: 1px solid rgba(124,58,237,.3);
+      color: var(--purple2); font-size: 12px; font-weight: 600;
+      padding: 5px 14px; border-radius: 100px; margin-bottom: 20px;
+      letter-spacing: .4px;
+    }
+    .hero-title {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(32px, 5vw, 52px);
+      font-weight: 700;
+      line-height: 1.15;
+      margin-bottom: 16px;
+    }
+    .grad { background: linear-gradient(135deg, var(--purple2), var(--cyan)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .hero-desc { font-size: 15px; color: var(--text2); line-height: 1.7; margin-bottom: 32px; }
+
+    /* Card upload */
+    .upload-card { padding: 28px; width: 100%; max-width: 520px; flex: 1; min-width: 280px; box-shadow: var(--shadow); }
+
+    /* Tabs */
+    .tabs { display: flex; gap: 6px; margin-bottom: 20px; background: var(--bg2); padding: 5px; border-radius: 10px; }
+    .tab-btn {
+      flex: 1; padding: 9px; border-radius: 8px;
+      font-size: 13px; font-weight: 500; color: var(--text2);
+      background: none; transition: background .2s, color .2s;
+      display: flex; align-items: center; justify-content: center; gap: 7px;
+    }
+    .tab-btn.active { background: var(--bg3); color: var(--text); }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* Drop zone */
+    .drop-zone {
+      border: 2px dashed rgba(255,255,255,.12);
+      border-radius: 12px;
+      padding: 32px 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color .2s, background .2s;
+    }
+    .drop-zone:hover, .drop-zone.drag-over {
+      border-color: var(--purple);
+      background: rgba(124,58,237,.06);
+    }
+    .drop-icon { font-size: 36px; color: var(--purple2); margin-bottom: 12px; }
+    .drop-title { font-size: 15px; font-weight: 600; margin-bottom: 5px; }
+    .drop-sub   { font-size: 12px; color: var(--text2); margin-bottom: 14px; }
+    .btn-sec {
+      padding: 9px 20px; border-radius: 8px;
+      background: rgba(124,58,237,.18); color: var(--purple2);
+      border: 1px solid rgba(124,58,237,.35); font-size: 13px; font-weight: 500;
+      transition: background .2s;
+    }
+    .btn-sec:hover { background: rgba(124,58,237,.3); }
+
+    .file-preview {
+      display: none;
+      align-items: center;
+      gap: 14px;
+      padding: 14px 16px;
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+    }
+    .file-preview.show { display: flex; }
+    .file-pdf-icon { font-size: 28px; color: var(--red); flex-shrink: 0; }
+    .file-info { flex: 1; min-width: 0; }
+    .file-name { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
+    .file-size { font-size: 11px; color: var(--text2); }
+    .btn-remove {
+      background: rgba(239,68,68,.12); color: var(--red);
+      border: 1px solid rgba(239,68,68,.25); border-radius: 8px;
+      width: 32px; height: 32px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center; font-size: 14px;
+      transition: background .2s;
+    }
+    .btn-remove:hover { background: rgba(239,68,68,.25); }
+
+    /* URL input */
+    .url-wrap { position: relative; }
+    .url-wrap i { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text3); font-size: 14px; }
+    .url-wrap input {
+      width: 100%;
+      background: var(--bg2);
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 10px;
+      padding: 12px 14px 12px 40px;
+      color: var(--text); font-size: 14px;
+      transition: border-color .2s;
+    }
+    .url-wrap input:focus { border-color: var(--purple); }
+    .url-hint { font-size: 12px; color: var(--text3); margin-top: 8px; display: flex; align-items: center; gap: 6px; }
+
+    /* Title input */
+    .title-wrap { margin-top: 18px; }
+    .title-wrap label { display: block; font-size: 12px; font-weight: 600; color: var(--text2); margin-bottom: 7px; letter-spacing: .5px; text-transform: uppercase; }
+    .title-wrap input {
+      width: 100%;
+      background: var(--bg2);
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 10px;
+      padding: 11px 14px;
+      color: var(--text); font-size: 14px;
+      transition: border-color .2s;
+    }
+    .title-wrap input:focus { border-color: var(--purple); }
+
+    /* Botão load */
+    .btn-load {
+      width: 100%;
+      margin-top: 20px;
+      padding: 14px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, var(--purple), var(--cyan));
+      color: #fff; font-size: 15px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+      transition: opacity .2s, transform .1s;
+    }
+    .btn-load:hover  { opacity: .88; }
+    .btn-load:active { transform: scale(.98); }
+    .btn-load:disabled { opacity: .45; cursor: not-allowed; }
+
+    /* Features */
+    .features { padding: 60px 32px; background: var(--bg2); }
+    .section-title { text-align: center; font-family: 'Playfair Display', serif; font-size: 28px; font-weight: 700; margin-bottom: 36px; }
+    .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 18px; max-width: 900px; margin: 0 auto; }
+    .feat-card { padding: 24px; border-radius: 14px; background: var(--bg3); border: 1px solid var(--border); }
+    .feat-icon { width: 44px; height: 44px; border-radius: 12px; background: linear-gradient(135deg, var(--purple), var(--cyan)); display: flex; align-items: center; justify-content: center; font-size: 18px; margin-bottom: 14px; }
+    .feat-card h3 { font-size: 15px; font-weight: 600; margin-bottom: 7px; }
+    .feat-card p  { font-size: 13px; color: var(--text2); line-height: 1.6; }
+
+    /* Footer */
+    .footer { padding: 24px 32px; border-top: 1px solid var(--border); text-align: center; font-size: 12px; color: var(--text3); }
+
+    /* ════════════════════════════════════════════════
+       TELA 3 — LOADING
+    ════════════════════════════════════════════════ */
+    #screen-loading {
+      align-items: center;
+      justify-content: center;
+      padding: 32px;
+    }
+    .loading-card {
+      text-align: center;
+      max-width: 480px;
+      width: 100%;
+      padding: 48px 36px;
+      box-shadow: var(--shadow);
+    }
+    .ring-wrap { position: relative; width: 90px; height: 90px; margin: 0 auto 28px; }
+    .ring {
+      position: absolute; inset: 0; border-radius: 50%;
+      border: 3px solid transparent;
+    }
+    .ring-1 { border-top-color: var(--purple);  animation: spin 1.2s linear infinite; }
+    .ring-2 { inset: 8px; border-top-color: var(--cyan);   animation: spin 1.8s linear infinite reverse; }
+    .ring-3 { inset: 16px; border-top-color: var(--gold);  animation: spin 2.4s linear infinite; }
+    .ring-icon { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 26px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .loading-title { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
+    .loading-msg   { font-size: 14px; color: var(--text2); margin-bottom: 24px; }
+
+    .progress-wrap { background: rgba(255,255,255,.07); border-radius: 100px; height: 6px; overflow: hidden; margin-bottom: 24px; }
+    .progress-bar  { height: 100%; border-radius: 100px; background: linear-gradient(90deg, var(--purple), var(--cyan)); transition: width .4s ease; width: 0%; }
+
+    .steps { display: flex; flex-direction: column; gap: 10px; margin-bottom: 24px; }
+    .step-item {
+      display: flex; align-items: center; gap: 12px;
+      padding: 11px 16px; border-radius: 10px;
+      font-size: 13px; font-weight: 500; color: var(--text3);
+      background: rgba(255,255,255,.03); border: 1px solid transparent;
+      transition: all .3s;
+    }
+    .step-item.active { color: var(--text); background: rgba(124,58,237,.1); border-color: rgba(124,58,237,.3); }
+    .step-item.done   { color: var(--green); background: rgba(16,185,129,.07); border-color: rgba(16,185,129,.25); }
+    .step-item i { width: 18px; text-align: center; }
+
+    .rag-badge-small {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(16,185,129,.1); border: 1px solid rgba(16,185,129,.25);
+      color: var(--green); font-size: 12px; padding: 8px 14px; border-radius: 100px;
+    }
+
+    /* ════════════════════════════════════════════════
+       TELA 4 — CHAT
+    ════════════════════════════════════════════════ */
+    #screen-chat {
+      flex-direction: row;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      width: 280px;
+      flex-shrink: 0;
+      background: var(--bg2);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      transition: transform .3s;
+    }
+    .sidebar-head {
+      padding: 18px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+    }
+    .sidebar-logo { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 15px; }
+    .sidebar-logo-icon { width: 34px; height: 34px; border-radius: 9px; background: linear-gradient(135deg, var(--purple), var(--cyan)); display: flex; align-items: center; justify-content: center; font-size: 15px; }
+    .sidebar-toggle { background: none; color: var(--text2); font-size: 16px; padding: 6px; border-radius: 7px; }
+    .sidebar-toggle:hover { background: rgba(255,255,255,.06); color: var(--text); }
+
+    .book-card {
+      margin: 16px; padding: 16px;
+      background: var(--bg3); border-radius: 12px; border: 1px solid var(--border);
+    }
+    .book-cover { width: 44px; height: 44px; border-radius: 10px; background: linear-gradient(135deg, var(--purple), var(--cyan)); display: flex; align-items: center; justify-content: center; font-size: 20px; margin-bottom: 10px; }
+    .book-name { font-size: 14px; font-weight: 600; margin-bottom: 8px; word-break: break-word; }
+    .book-stats { display: flex; flex-wrap: wrap; gap: 6px; }
+    .stat-pill { font-size: 11px; padding: 3px 9px; border-radius: 100px; background: rgba(255,255,255,.07); color: var(--text2); display: flex; align-items: center; gap: 5px; }
+
+    .rag-active-badge {
+      margin: 0 16px 16px;
+      padding: 10px 14px;
+      border-radius: 10px;
+      background: rgba(16,185,129,.08);
+      border: 1px solid rgba(16,185,129,.2);
+      color: var(--green);
+      font-size: 12px;
+      display: flex; align-items: center; gap: 8px;
+    }
+
+    .sidebar-section { padding: 0 16px; margin-bottom: 6px; font-size: 11px; font-weight: 700; color: var(--text3); letter-spacing: 1px; text-transform: uppercase; }
+
+    .suggestions-wrap { padding: 0 16px; display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+    .sug-btn {
+      text-align: left; padding: 10px 13px;
+      background: rgba(255,255,255,.03); border: 1px solid var(--border);
+      border-radius: 9px; font-size: 12px; color: var(--text2);
+      transition: background .2s, color .2s, border-color .2s; line-height: 1.4;
+    }
+    .sug-btn:hover { background: rgba(124,58,237,.1); color: var(--text); border-color: rgba(124,58,237,.3); }
+
+    .sidebar-actions { padding: 16px; display: flex; flex-direction: column; gap: 8px; margin-top: auto; border-top: 1px solid var(--border); }
+    .action-btn {
+      padding: 10px 14px; border-radius: 9px;
+      background: rgba(255,255,255,.04); border: 1px solid var(--border);
+      color: var(--text2); font-size: 13px; font-weight: 500;
+      display: flex; align-items: center; gap: 9px; transition: background .2s, color .2s;
+    }
+    .action-btn:hover { background: rgba(255,255,255,.09); color: var(--text); }
+    .action-btn.danger:hover { background: rgba(239,68,68,.12); color: var(--red); border-color: rgba(239,68,68,.3); }
+
+    /* Chat main */
+    .chat-main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+    .topbar {
+      display: flex; align-items: center; gap: 12px;
+      padding: 14px 20px;
+      background: var(--bg2);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .topbar-toggle { background: none; color: var(--text2); font-size: 18px; display: none; }
+    .topbar-book { display: flex; align-items: center; gap: 9px; flex: 1; min-width: 0; }
+    .topbar-book i { color: var(--purple2); }
+    .topbar-book span { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .topbar-rag { padding: 5px 12px; border-radius: 100px; background: rgba(16,185,129,.1); border: 1px solid rgba(16,185,129,.25); color: var(--green); font-size: 12px; display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+    .topbar-acts { display: flex; gap: 6px; }
+    .topbar-btn { background: rgba(255,255,255,.05); border: 1px solid var(--border); color: var(--text2); width: 36px; height: 36px; border-radius: 9px; display: flex; align-items: center; justify-content: center; font-size: 15px; transition: background .2s, color .2s; }
+    .topbar-btn:hover { background: rgba(255,255,255,.1); color: var(--text); }
+
+    /* Messages */
+    .messages { flex: 1; overflow-y: auto; padding: 24px 20px; display: flex; flex-direction: column; gap: 16px; }
+    .messages::-webkit-scrollbar { width: 4px; }
+    .messages::-webkit-scrollbar-track { background: transparent; }
+    .messages::-webkit-scrollbar-thumb { background: rgba(255,255,255,.1); border-radius: 4px; }
+
+    .welcome {
+      text-align: center; padding: 40px 20px;
+      display: flex; flex-direction: column; align-items: center; gap: 14px;
+    }
+    .welcome-icon { width: 64px; height: 64px; border-radius: 18px; background: linear-gradient(135deg, var(--purple), var(--cyan)); display: flex; align-items: center; justify-content: center; font-size: 28px; }
+    .welcome h2 { font-size: 20px; font-weight: 700; }
+    .welcome p  { font-size: 14px; color: var(--text2); max-width: 360px; line-height: 1.6; }
+    .welcome-rag { display: flex; align-items: center; gap: 8px; background: rgba(16,185,129,.08); border: 1px solid rgba(16,185,129,.2); color: var(--green); font-size: 12px; padding: 8px 16px; border-radius: 100px; }
+
+    /* Mensagens */
+    .msg-row { display: flex; gap: 12px; align-items: flex-start; }
+    .msg-row.user { flex-direction: row-reverse; }
+    .msg-avatar { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0; }
+    .msg-row.user .msg-avatar { background: linear-gradient(135deg, var(--purple), var(--cyan)); }
+    .msg-row.ai   .msg-avatar { background: var(--bg3); border: 1px solid var(--border); color: var(--purple2); }
+    .msg-col { display: flex; flex-direction: column; max-width: min(72%, 680px); }
+    .bubble {
+      padding: 13px 16px; border-radius: 12px;
+      font-size: 14px; line-height: 1.65;
+    }
+    .msg-row.user .bubble { background: linear-gradient(135deg, rgba(124,58,237,.35), rgba(6,182,212,.2)); border: 1px solid rgba(124,58,237,.3); border-radius: 12px 4px 12px 12px; }
+    .msg-row.ai   .bubble { background: var(--bg2); border: 1px solid var(--border); border-radius: 4px 12px 12px 12px; }
+    .bubble.error { border-color: rgba(239,68,68,.3) !important; }
+    .msg-time { font-size: 11px; color: var(--text3); margin-top: 5px; padding: 0 4px; }
+    .msg-row.user .msg-time { text-align: right; }
+
+    /* Markdown no bubble */
+    .bubble strong { font-weight: 700; }
+    .bubble em     { font-style: italic; }
+    .bubble code   { background: rgba(255,255,255,.08); padding: 2px 6px; border-radius: 5px; font-size: 13px; font-family: monospace; }
+    .bubble h3, .bubble h4 { font-weight: 700; margin: 10px 0 5px; }
+    .bubble ul, .bubble ol { padding-left: 20px; margin: 8px 0; }
+    .bubble li { margin-bottom: 4px; }
+    .bubble blockquote { border-left: 3px solid var(--purple2); padding-left: 12px; color: var(--text2); margin: 8px 0; font-style: italic; }
+    .bubble p  { margin-bottom: 8px; }
+    .bubble p:last-child { margin-bottom: 0; }
+
+    /* Typing */
+    .typing { display: flex; align-items: center; gap: 5px; padding: 14px 16px; }
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--purple2); animation: bounce .9s ease infinite; }
+    .dot:nth-child(2) { animation-delay: .15s; }
+    .dot:nth-child(3) { animation-delay: .30s; }
+    @keyframes bounce { 0%,80%,100% { transform: scale(.7); opacity: .5; } 40% { transform: scale(1); opacity: 1; } }
+
+    /* RAG badge nas mensagens */
+    .rag-msg-badge {
+      display: flex; align-items: center; gap: 7px;
+      font-size: 11px; color: var(--text3); padding: 5px 10px;
+      background: rgba(255,255,255,.03); border-radius: 8px;
+      border: 1px solid var(--border); margin-top: 6px; flex-wrap: wrap;
+    }
+    .rag-msg-badge i { color: var(--green); }
+
+    /* Input */
+    .chat-input-area {
+      padding: 16px 20px;
+      background: var(--bg2);
+      border-top: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .input-row { display: flex; gap: 10px; align-items: flex-end; }
+    .chat-textarea {
+      flex: 1;
+      background: var(--bg3);
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 12px;
+      padding: 13px 16px;
+      color: var(--text);
+      font-size: 14px;
+      resize: none;
+      max-height: 140px;
+      line-height: 1.5;
+      transition: border-color .2s;
+    }
+    .chat-textarea:focus { border-color: var(--purple); }
+    .chat-textarea::placeholder { color: var(--text3); }
+    .send-btn {
+      width: 46px; height: 46px; flex-shrink: 0;
+      border-radius: 12px;
+      background: linear-gradient(135deg, var(--purple), var(--cyan));
+      color: #fff; font-size: 16px;
+      display: flex; align-items: center; justify-content: center;
+      transition: opacity .2s, transform .1s;
+    }
+    .send-btn:hover  { opacity: .85; }
+    .send-btn:active { transform: scale(.94); }
+    .send-btn:disabled { opacity: .4; cursor: not-allowed; }
+    .input-hint { font-size: 11px; color: var(--text3); margin-top: 8px; display: flex; align-items: center; gap: 6px; }
+    .input-hint i { color: var(--green); }
+
+    /* Toast */
+    .toast {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px);
+      background: #1e2130; border: 1px solid var(--border);
+      border-radius: 12px; padding: 13px 20px;
+      display: flex; align-items: center; gap: 10px;
+      font-size: 14px; box-shadow: var(--shadow);
+      opacity: 0; transition: opacity .3s, transform .3s;
+      z-index: 9999; max-width: 90vw; pointer-events: none;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .toast.err  { border-color: rgba(239,68,68,.4); color: var(--red); }
+    .toast.ok   { border-color: rgba(16,185,129,.4); color: var(--green); }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .sidebar { position: fixed; left: 0; top: 0; bottom: 0; z-index: 100; transform: translateX(-100%); }
+      .sidebar.open { transform: translateX(0); }
+      .topbar-toggle { display: flex !important; }
+      .hero-body { gap: 32px; padding: 32px 20px; }
+      .hero-left  { min-width: 0; }
+      .hero-right { display: none; }
+      .hero-header { padding: 14px 20px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Partículas -->
+<div id="particles"></div>
+
+<!-- ══════════════════ TELA 1: API KEY ══════════════════ -->
+<div id="screen-apikey" class="screen">
+  <div class="apikey-card glass">
+    <div class="brand">
+      <div class="brand-icon">📚</div>
+      <div>
+        <div class="brand-name">BookDialog</div>
+        <div class="brand-sub">Sistema de Diálogo com Livros Digitais</div>
+      </div>
+    </div>
+    <div class="divider"></div>
+
+    <div class="card-title"><i class="fa-solid fa-key" style="color:var(--gold)"></i> Configurar API de IA</div>
+    <div class="card-desc">Para conversar com livros, você precisa de uma API Key OpenAI (ou compatível). A chave fica salva apenas no seu navegador.</div>
+
+    <form onsubmit="verifyApiKey(); return false;" autocomplete="off">
+    <input type="text" name="username" style="display:none" autocomplete="username" />
+    <div class="field">
+      <label>API Key <span class="req">*</span></label>
+      <div class="input-wrap">
+        <input type="password" id="inp-apikey" placeholder="sk-..." autocomplete="new-password" />
+        <button type="button" class="eye-btn" onclick="toggleEye('inp-apikey', this)"><i class="fa-solid fa-eye"></i></button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Base URL <span style="color:var(--text3);font-weight:400;text-transform:none;">(opcional)</span></label>
+      <input type="url" id="inp-baseurl" value="https://api.openai.com/v1" placeholder="https://api.openai.com/v1" autocomplete="off" />
+    </div>
+
+    <div class="field">
+      <label>Modelo</label>
+      <select id="inp-model">
+        <option value="gpt-4o-mini">GPT-4o Mini (rápido e econômico)</option>
+        <option value="gpt-4o">GPT-4o (mais capaz)</option>
+        <option value="gpt-4-turbo">GPT-4 Turbo</option>
+        <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+      </select>
+    </div>
+
+    <div class="status-box" id="apikey-status"></div>
+
+    <button type="submit" class="btn-primary" id="btn-verify">
+      <i class="fa-solid fa-check-circle"></i> Verificar e Continuar
+    </button>
+    </form>
+
+    <div class="help-text">
+      Obtenha sua key em <a href="https://platform.openai.com/api-keys" target="_blank">platform.openai.com</a><br/>
+      Compatível com qualquer API no padrão OpenAI.
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ TELA 2: UPLOAD ══════════════════ -->
+<div id="screen-upload" class="screen">
+  <header class="hero-header">
+    <div class="brand" style="margin-bottom:0">
+      <div class="brand-icon" style="width:38px;height:38px;font-size:18px;">📚</div>
+      <div>
+        <div class="brand-name" style="font-size:17px">BookDialog</div>
+      </div>
+    </div>
+    <nav class="hero-nav">
+      <a href="#features" class="nav-link">Recursos</a>
+      <button class="nav-btn" onclick="goTo('screen-apikey')"><i class="fa-solid fa-key"></i> API Key</button>
+    </nav>
+  </header>
+
+  <div class="hero-body">
+    <div class="hero-left">
+      <div class="pill"><i class="fa-solid fa-sparkles"></i> Powered by IA + RAG Vetorial</div>
+      <h1 class="hero-title">Converse com<br/><span class="grad">qualquer livro</span></h1>
+      <p class="hero-desc">
+        Carregue um PDF e dialogue de forma inteligente com seu conteúdo.<br/>
+        Nossa arquitetura <strong>RAG</strong> encontra apenas os trechos relevantes — o livro <em>nunca</em> vai inteiro para a IA.
+      </p>
+    </div>
+
+    <div class="upload-card glass hero-right" id="upload-card">
+      <div class="tabs">
+        <button class="tab-btn active" data-tab="file" onclick="switchTab('file', this)">
+          <i class="fa-solid fa-file-arrow-up"></i> Arquivo PDF
+        </button>
+        <button class="tab-btn" data-tab="url" onclick="switchTab('url', this)">
+          <i class="fa-solid fa-link"></i> URL / Link
+        </button>
+      </div>
+
+      <!-- Tab Arquivo -->
+      <div class="tab-panel active" id="tab-file">
+        <div class="drop-zone" id="drop-zone">
+          <div class="drop-icon"><i class="fa-solid fa-cloud-arrow-up"></i></div>
+          <div class="drop-title">Arraste o PDF aqui</div>
+          <div class="drop-sub">ou clique no botão abaixo para selecionar</div>
+          <button class="btn-sec" onclick="document.getElementById('pdf-input').click()">
+            <i class="fa-solid fa-folder-open"></i> Escolher arquivo
+          </button>
+        </div>
+        <input type="file" id="pdf-input" accept=".pdf,application/pdf" style="display:none" />
+        <div class="file-preview" id="file-preview">
+          <div class="file-pdf-icon"><i class="fa-solid fa-file-pdf"></i></div>
+          <div class="file-info">
+            <span class="file-name" id="file-name"></span>
+            <span class="file-size" id="file-size"></span>
+          </div>
+          <button class="btn-remove" onclick="clearFile()" title="Remover arquivo"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+      </div>
+
+      <!-- Tab URL -->
+      <div class="tab-panel" id="tab-url">
+        <div class="url-wrap">
+          <i class="fa-solid fa-link"></i>
+          <input type="url" id="inp-pdfurl" placeholder="https://exemplo.com/livro.pdf" autocomplete="off" spellcheck="false" />
+        </div>
+        <div class="url-hint"><i class="fa-solid fa-circle-info"></i> Cole a URL direta de um arquivo PDF público.</div>
+      </div>
+
+      <div class="title-wrap">
+        <label><i class="fa-solid fa-book"></i> Título do livro <span style="font-weight:400;text-transform:none;color:var(--text3)">(opcional)</span></label>
+        <input type="text" id="inp-title" placeholder="Ex: Dom Casmurro – Machado de Assis" />
+      </div>
+
+      <button class="btn-load" id="btn-load" onclick="loadBook()">
+        <i class="fa-solid fa-wand-magic-sparkles"></i> Carregar e Iniciar Diálogo
+      </button>
+    </div>
+  </div>
+
+  <section class="features" id="features">
+    <h2 class="section-title">Recursos Principais</h2>
+    <div class="features-grid">
+      <div class="feat-card">
+        <div class="feat-icon">📄</div>
+        <h3>Upload ou URL</h3>
+        <p>Carregue PDFs do dispositivo ou cole um link direto da web.</p>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">🧠</div>
+        <h3>Arquitetura RAG</h3>
+        <p>Busca vetorial encontra só os trechos relevantes. O livro nunca vai inteiro para a IA.</p>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">💬</div>
+        <h3>Diálogo Natural</h3>
+        <p>Converse livremente, faça perguntas complexas e explore o livro em profundidade.</p>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">🐍</div>
+        <h3>Backend Python</h3>
+        <p>FastAPI + pdfplumber extraem o texto com precisão. Embeddings OpenAI garantem busca semântica.</p>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    &copy; 2026 BookDialog · Sistema de Diálogo com Livros Digitais · FastAPI + RAG + OpenAI
+  </footer>
+</div>
+
+<!-- ══════════════════ TELA 3: LOADING ══════════════════ -->
+<div id="screen-loading" class="screen">
+  <div class="loading-card glass">
+    <div class="ring-wrap">
+      <div class="ring ring-1"></div>
+      <div class="ring ring-2"></div>
+      <div class="ring ring-3"></div>
+      <div class="ring-icon">📚</div>
+    </div>
+    <div class="loading-title">Processando seu livro...</div>
+    <div class="loading-msg" id="load-msg">Aguarde...</div>
+    <div class="progress-wrap"><div class="progress-bar" id="load-bar"></div></div>
+    <div class="steps">
+      <div class="step-item" id="step-1"><i class="fa-solid fa-file-pdf"></i> Extraindo texto do PDF</div>
+      <div class="step-item" id="step-2"><i class="fa-solid fa-scissors"></i> Dividindo em chunks</div>
+      <div class="step-item" id="step-3"><i class="fa-solid fa-vector-square"></i> Gerando embeddings</div>
+      <div class="step-item" id="step-4"><i class="fa-solid fa-database"></i> Indexando banco vetorial</div>
+    </div>
+    <div class="rag-badge-small"><i class="fa-solid fa-shield-halved"></i> PDF nunca enviado para IA · Apenas vetores semânticos</div>
+  </div>
+</div>
+
+<!-- ══════════════════ TELA 4: CHAT ══════════════════ -->
+<div id="screen-chat" class="screen">
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-head">
+      <div class="sidebar-logo">
+        <div class="sidebar-logo-icon">📚</div>
+        BookDialog
+      </div>
+      <button class="sidebar-toggle" onclick="toggleSidebar()"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+
+    <div class="book-card">
+      <div class="book-cover">📖</div>
+      <div class="book-name" id="sb-title">—</div>
+      <div class="book-stats">
+        <div class="stat-pill"><i class="fa-solid fa-file"></i> <span id="sb-pages">—</span> pág.</div>
+        <div class="stat-pill"><i class="fa-solid fa-font"></i> <span id="sb-chars">—</span> chars</div>
+        <div class="stat-pill"><i class="fa-solid fa-cubes"></i> <span id="sb-chunks">—</span> chunks</div>
+      </div>
+    </div>
+
+    <div class="rag-active-badge">
+      <i class="fa-solid fa-database"></i> RAG ativo · Banco vetorial indexado
+    </div>
+
+    <div class="sidebar-section">Sugestões</div>
+    <div class="suggestions-wrap" id="suggestions-wrap">
+      <button class="sug-btn" onclick="useSuggestion(this)">Qual é o tema principal do livro?</button>
+      <button class="sug-btn" onclick="useSuggestion(this)">Faça um resumo geral do conteúdo.</button>
+      <button class="sug-btn" onclick="useSuggestion(this)">Quais são os personagens principais?</button>
+      <button class="sug-btn" onclick="useSuggestion(this)">Quais ideias mais se destacam?</button>
+      <button class="sug-btn" onclick="useSuggestion(this)">O que o autor defende neste livro?</button>
+      <button class="sug-btn" onclick="useSuggestion(this)">Quais são as principais conclusões?</button>
+    </div>
+
+    <div class="sidebar-actions">
+      <button class="action-btn" onclick="clearChat()"><i class="fa-solid fa-broom"></i> Limpar conversa</button>
+      <button class="action-btn" onclick="goTo('screen-apikey')"><i class="fa-solid fa-key"></i> Config. API</button>
+      <button class="action-btn danger" onclick="newBook()"><i class="fa-solid fa-plus"></i> Novo livro</button>
+    </div>
+  </aside>
+
+  <!-- Chat main -->
+  <main class="chat-main">
+    <div class="topbar">
+      <button class="topbar-toggle" onclick="toggleSidebar()"><i class="fa-solid fa-bars"></i></button>
+      <div class="topbar-book">
+        <i class="fa-solid fa-book-open"></i>
+        <span id="tp-title">Livro Carregado</span>
+      </div>
+      <div class="topbar-rag"><i class="fa-solid fa-database"></i> RAG ativo</div>
+      <div class="topbar-acts">
+        <button class="topbar-btn" onclick="clearChat()" title="Limpar conversa"><i class="fa-solid fa-broom"></i></button>
+        <button class="topbar-btn" onclick="goTo('screen-apikey')" title="API Key"><i class="fa-solid fa-key"></i></button>
+        <button class="topbar-btn" onclick="newBook()" title="Novo livro"><i class="fa-solid fa-rotate"></i></button>
+      </div>
+    </div>
+
+    <div class="messages" id="messages">
+      <div class="welcome" id="welcome">
+        <div class="welcome-icon">💬</div>
+        <h2>Pronto para dialogar!</h2>
+        <p>Faça qualquer pergunta sobre o livro. A IA buscará os trechos mais relevantes e responderá com base neles.</p>
+        <div class="welcome-rag"><i class="fa-solid fa-shield-halved"></i> RAG ativo — apenas trechos relevantes vão para a IA</div>
+      </div>
+    </div>
+
+    <div class="chat-input-area">
+      <div class="input-row">
+        <textarea id="chat-input" class="chat-textarea" rows="1"
+          placeholder="Faça uma pergunta sobre o livro..."
+          onkeydown="handleEnter(event)"
+          oninput="autoResize(this)"></textarea>
+        <button class="send-btn" id="send-btn" onclick="sendMessage()">
+          <i class="fa-solid fa-paper-plane"></i>
+        </button>
+      </div>
+      <div class="input-hint"><i class="fa-solid fa-database"></i> RAG: apenas trechos relevantes são enviados para a IA — nunca o livro completo.</div>
+    </div>
+  </main>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"><i class="fa-solid fa-circle-exclamation"></i> <span id="toast-msg"></span></div>
+
+<script>
+/* ══════════════════════════════════════════════════════
+   BookDialog – Frontend JS
+   Backend: Python FastAPI (localhost:8000)
+══════════════════════════════════════════════════════ */
+
+// ── Estado ─────────────────────────────────────────────────────
+const S = {
+  apiKey:    '',
+  baseUrl:   'https://api.openai.com/v1',
+  model:     'gpt-4o-mini',
+  bookId:    '',
+  bookTitle: '',
+  bookPages: 0,
+  bookChars: 0,
+  bookChunks:0,
+  history:   [],
+  busy:      false,
+  file:      null,
+  tab:       'file',
+}
+
+// ── Persistência ───────────────────────────────────────────────
+function loadState() {
+  try {
+    S.apiKey  = localStorage.getItem('bd_key')  || ''
+    S.baseUrl = localStorage.getItem('bd_url')  || 'https://api.openai.com/v1'
+    S.model   = localStorage.getItem('bd_model')|| 'gpt-4o-mini'
+  } catch(_) {}
+}
+function saveState() {
+  try {
+    localStorage.setItem('bd_key',   S.apiKey)
+    localStorage.setItem('bd_url',   S.baseUrl)
+    localStorage.setItem('bd_model', S.model)
+  } catch(_) {}
+}
+
+// ── Init ───────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  loadState()
+  buildParticles()
+  initDropZone()
+
+  // Um único listener no input de arquivo
+  document.getElementById('pdf-input').addEventListener('change', e => {
+    const f = e.target.files?.[0]
+    if (f) setFile(f)
+  })
+
+  if (S.apiKey) {
+    fillApiForm()
+    goTo('screen-upload')
+  } else {
+    goTo('screen-apikey')
+  }
+})
+
+// ── Partículas ─────────────────────────────────────────────────
+function buildParticles() {
+  const c = document.getElementById('particles')
+  if (!c) return
+  const colors = ['#7c3aed','#9f5fff','#06b6d4','#f59e0b','#10b981']
+  for (let i = 0; i < 25; i++) {
+    const p = document.createElement('div')
+    p.className = 'pt'
+    const s = Math.random() * 5 + 2
+    p.style.cssText = `width:${s}px;height:${s}px;left:${Math.random()*100}%;background:${colors[i%colors.length]};animation-duration:${14+Math.random()*18}s;animation-delay:${-Math.random()*20}s`
+    c.appendChild(p)
+  }
+}
+
+// ── Navegação ──────────────────────────────────────────────────
+function goTo(id) {
+  document.querySelectorAll('.screen').forEach(s => {
+    s.classList.remove('active')
+    s.style.display = 'none'
+  })
+  const el = document.getElementById(id)
+  if (!el) return
+  el.style.display = 'flex'
+  el.classList.add('active')
+}
+
+// ── API Key Screen ─────────────────────────────────────────────
+function fillApiForm() {
+  const ki = document.getElementById('inp-apikey')
+  const bi = document.getElementById('inp-baseurl')
+  const mi = document.getElementById('inp-model')
+  if (ki) ki.value = S.apiKey
+  if (bi) bi.value = S.baseUrl
+  if (mi) mi.value = S.model
+}
+
+function toggleEye(id, btn) {
+  const inp = document.getElementById(id)
+  if (!inp) return
+  const show = inp.type === 'password'
+  inp.type = show ? 'text' : 'password'
+  btn.querySelector('i').className = show ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye'
+}
+
+function setApiStatus(type, html) {
+  const el = document.getElementById('apikey-status')
+  if (!el) return
+  el.className = 'status-box ' + type
+  el.innerHTML = html
+}
+
+async function verifyApiKey() {
+  const key  = document.getElementById('inp-apikey').value.trim()
+  const url  = document.getElementById('inp-baseurl').value.trim() || 'https://api.openai.com/v1'
+  const mdl  = document.getElementById('inp-model').value
+
+  if (!key) { setApiStatus('error', '<i class="fa-solid fa-circle-xmark"></i> Informe sua API Key.'); return }
+
+  setApiStatus('info', '<i class="fa-solid fa-spinner fa-spin"></i> Verificando chave...')
+  document.getElementById('btn-verify').disabled = true
+
+  try {
+    const r = await fetch('/api/test-key', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ api_key: key, base_url: url, model: mdl })
+    })
+    const d = await r.json()
+    if (d.ok) {
+      S.apiKey = key; S.baseUrl = url; S.model = mdl
+      saveState()
+      setApiStatus('success', '<i class="fa-solid fa-check-circle"></i> Chave válida! Redirecionando...')
+      setTimeout(() => goTo('screen-upload'), 900)
+    } else {
+      setApiStatus('error', `<i class="fa-solid fa-circle-xmark"></i> ${esc(d.error || 'Chave inválida.')}`)
+    }
+  } catch(e) {
+    setApiStatus('error', `<i class="fa-solid fa-circle-xmark"></i> Erro: ${esc(e.message)}`)
+  } finally {
+    document.getElementById('btn-verify').disabled = false
+  }
+}
+
+// ── Tabs ───────────────────────────────────────────────────────
+function switchTab(name, btn) {
+  S.tab = name
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'))
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'))
+  btn.classList.add('active')
+  document.getElementById('tab-' + name)?.classList.add('active')
+}
+
+// ── Drop Zone ──────────────────────────────────────────────────
+function initDropZone() {
+  const dz = document.getElementById('drop-zone')
+  if (!dz) return
+  dz.addEventListener('dragover',  e => { e.preventDefault(); dz.classList.add('drag-over') })
+  dz.addEventListener('dragleave', () => dz.classList.remove('drag-over'))
+  dz.addEventListener('drop', e => {
+    e.preventDefault(); dz.classList.remove('drag-over')
+    const f = e.dataTransfer?.files?.[0]
+    if (f) setFile(f)
+  })
+  // Clique no drop-zone (exceto no botão interno)
+  dz.addEventListener('click', e => {
+    if (!e.target.closest('.btn-sec')) {
+      document.getElementById('pdf-input').click()
+    }
+  })
+}
+
+function setFile(f) {
+  if (!f.name.toLowerCase().endsWith('.pdf') && f.type !== 'application/pdf') {
+    showToast('Selecione um arquivo PDF válido.', 'err'); return
+  }
+  S.file = f
+  document.getElementById('drop-zone').style.display = 'none'
+  const fp = document.getElementById('file-preview')
+  fp.classList.add('show')
+  document.getElementById('file-name').textContent = f.name
+  document.getElementById('file-size').textContent = fmtSize(f.size)
+  // Preenche título automaticamente
+  const ti = document.getElementById('inp-title')
+  if (ti && !ti.value) ti.value = f.name.replace(/\.pdf$/i, '').replace(/[-_]/g, ' ')
+}
+
+function clearFile() {
+  S.file = null
+  document.getElementById('drop-zone').style.display = 'flex'
+  document.getElementById('file-preview').classList.remove('show')
+  document.getElementById('pdf-input').value = ''
+}
+
+// ── Load Book ──────────────────────────────────────────────────
+async function loadBook() {
+  if (!S.apiKey) { showToast('Configure sua API Key primeiro.', 'err'); goTo('screen-apikey'); return }
+
+  const title = document.getElementById('inp-title').value.trim()
+
+  if (S.tab === 'file') {
+    if (!S.file) { showToast('Selecione um arquivo PDF.', 'err'); return }
+    await processFile(S.file, title)
+  } else {
+    const url = document.getElementById('inp-pdfurl').value.trim()
+    if (!url) { showToast('Cole a URL do PDF.', 'err'); return }
+    await processUrl(url, title)
+  }
+}
+
+// ── Processo: arquivo local ─────────────────────────────────────
+async function processFile(file, title) {
+  goTo('screen-loading')
+  setStep(1); setProgress(5, 'Enviando PDF para o servidor...')
+
+  try {
+    // 1. Upload para FastAPI — extração Python com pdfplumber
+    const fd = new FormData()
+    fd.append('file', file)
+    const r1 = await fetch('/api/upload-pdf', { method: 'POST', body: fd })
+    const d1 = await r1.json()
+    if (!r1.ok) throw new Error(d1.detail || 'Erro ao extrair texto do PDF.')
+
+    const { text, pages, chars, filename } = d1
+    const bookTitle = title || filename.replace(/\.pdf$/i, '').replace(/[-_]/g, ' ')
+
+    await indexBook(text, pages, chars, bookTitle)
+  } catch(e) {
+    goTo('screen-upload')
+    showToast(e.message || 'Erro inesperado.', 'err')
+  }
+}
+
+// ── Processo: URL ───────────────────────────────────────────────
+async function processUrl(url, title) {
+  goTo('screen-loading')
+  setStep(1); setProgress(5, 'Baixando PDF...')
+
+  try {
+    const r1 = await fetch('/api/fetch-pdf', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url })
+    })
+    const d1 = await r1.json()
+    if (!r1.ok) throw new Error(d1.detail || 'Erro ao baixar PDF da URL.')
+
+    const { text, pages, chars, filename } = d1
+    const bookTitle = title || filename.replace(/\.pdf$/i, '').replace(/[-_]/g, ' ')
+
+    await indexBook(text, pages, chars, bookTitle)
+  } catch(e) {
+    goTo('screen-upload')
+    showToast(e.message || 'Erro inesperado.', 'err')
+  }
+}
+
+// ── Indexação RAG ───────────────────────────────────────────────
+async function indexBook(text, pages, chars, bookTitle) {
+  setStep(2); setProgress(40, 'Dividindo em chunks...')
+
+  const bookId = 'book_' + Date.now() + '_' + Math.random().toString(36).slice(2,6)
+
+  setStep(3); setProgress(55, 'Gerando embeddings vetoriais...')
+
+  const r2 = await fetch('/api/ingest', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      book_id: bookId,
+      text: text.substring(0, 300000),
+      api_key: S.apiKey,
+      base_url: S.baseUrl,
+    })
+  })
+  const d2 = await r2.json()
+  if (!r2.ok) throw new Error(d2.detail || 'Erro ao indexar livro.')
+
+  setStep(4); setProgress(80, 'Gerando sugestões de perguntas...')
+
+  S.bookId    = bookId
+  S.bookTitle = bookTitle
+  S.bookPages = pages
+  S.bookChars = chars
+  S.bookChunks= d2.chunks
+  S.history   = []
+
+  // Sugestões via RAG
+  let sugs = []
+  try {
+    const rs = await fetch('/api/suggestions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ book_id: bookId, book_title: bookTitle, api_key: S.apiKey, base_url: S.baseUrl, model: S.model })
+    })
+    const ds = await rs.json()
+    sugs = ds.suggestions || []
+  } catch(_) {}
+
+  setProgress(100, 'Pronto!')
+  setTimeout(() => openChat(sugs), 500)
+}
+
+function setStep(n) {
+  for (let i = 1; i <= 4; i++) {
+    const el = document.getElementById('step-' + i)
+    if (!el) continue
+    el.classList.remove('active', 'done')
+    if (i < n) el.classList.add('done')
+    else if (i === n) el.classList.add('active')
+  }
+}
+function setProgress(pct, msg) {
+  const bar = document.getElementById('load-bar')
+  const msgEl = document.getElementById('load-msg')
+  if (bar) bar.style.width = pct + '%'
+  if (msgEl) msgEl.textContent = msg
+}
+
+// ── Abrir Chat ─────────────────────────────────────────────────
+function openChat(sugs) {
+  goTo('screen-chat')
+
+  document.getElementById('sb-title').textContent  = S.bookTitle || 'Livro'
+  document.getElementById('tp-title').textContent  = S.bookTitle || 'Livro'
+  document.getElementById('sb-pages').textContent  = S.bookPages
+  document.getElementById('sb-chars').textContent  = fmtNum(S.bookChars)
+  document.getElementById('sb-chunks').textContent = fmtNum(S.bookChunks)
+
+  // Sugestões
+  const sw = document.getElementById('suggestions-wrap')
+  if (sw && sugs.length) {
+    sw.innerHTML = sugs.map(s =>
+      `<button class="sug-btn" onclick="useSuggestion(this)">${esc(s)}</button>`
+    ).join('')
+  }
+
+  setTimeout(() => document.getElementById('chat-input')?.focus(), 300)
+}
+
+// ── Chat ───────────────────────────────────────────────────────
+function useSuggestion(btn) {
+  const inp = document.getElementById('chat-input')
+  if (inp) { inp.value = btn.textContent.trim(); autoResize(inp) }
+  document.getElementById('sidebar')?.classList.remove('open')
+  sendMessage()
+}
+
+function handleEnter(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage() }
+}
+
+function autoResize(el) {
+  el.style.height = 'auto'
+  el.style.height = Math.min(el.scrollHeight, 140) + 'px'
+}
+
+async function sendMessage() {
+  const inp = document.getElementById('chat-input')
+  const msg = inp?.value.trim()
+  if (!msg || S.busy) return
+
+  inp.value = ''; autoResize(inp)
+  hideWelcome()
+  appendMsg('user', msg)
+  S.history.push({ role: 'user', content: msg })
+
+  const tid = showTyping()
+  S.busy = true
+  document.getElementById('send-btn').disabled = true
+
+  try {
+    const r = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        book_id:    S.bookId,
+        message:    msg,
+        book_title: S.bookTitle,
+        history:    S.history.slice(-6),
+        api_key:    S.apiKey,
+        base_url:   S.baseUrl,
+        model:      S.model,
+      })
+    })
+    const d = await r.json()
+    removeTyping(tid)
+
+    if (!r.ok) {
+      appendMsg('ai', `⚠️ ${esc(d.detail || d.error || 'Erro ao obter resposta.')}`, true)
+    } else {
+      appendMsg('ai', d.reply)
+      S.history.push({ role: 'assistant', content: d.reply })
+      if (d.rag) appendRagBadge(d.rag)
+    }
+  } catch(e) {
+    removeTyping(tid)
+    appendMsg('ai', '⚠️ Erro de conexão. Tente novamente.', true)
+  } finally {
+    S.busy = false
+    document.getElementById('send-btn').disabled = false
+    inp?.focus()
+  }
+}
+
+function appendMsg(role, text, isErr = false) {
+  const area = document.getElementById('messages')
+  if (!area) return
+
+  const isUser = role === 'user'
+  const row = document.createElement('div')
+  row.className = 'msg-row ' + (isUser ? 'user' : 'ai')
+
+  const av = document.createElement('div')
+  av.className = 'msg-avatar'
+  av.innerHTML = isUser ? '<i class="fa-solid fa-user"></i>' : '<i class="fa-solid fa-robot"></i>'
+
+  const bub = document.createElement('div')
+  bub.className = 'bubble' + (isErr ? ' error' : '')
+  bub.innerHTML = isUser ? `<p>${esc(text)}</p>` : renderMD(text)
+
+  const meta = document.createElement('div')
+  meta.className = 'msg-time'
+  meta.textContent = fmtTime(new Date())
+
+  const col = document.createElement('div')
+  col.className = 'msg-col'
+  col.appendChild(bub)
+  col.appendChild(meta)
+
+  if (isUser) { row.appendChild(col); row.appendChild(av) }
+  else        { row.appendChild(av);  row.appendChild(col) }
+
+  area.appendChild(row)
+  area.scrollTop = area.scrollHeight
+  return row
+}
+
+function showTyping() {
+  const area = document.getElementById('messages')
+  const id   = 'typing-' + Date.now()
+  const row  = document.createElement('div')
+  row.className = 'msg-row ai'; row.id = id
+  row.innerHTML = `
+    <div class="msg-avatar"><i class="fa-solid fa-robot"></i></div>
+    <div class="bubble"><div class="typing"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div></div>`
+  area?.appendChild(row)
+  area.scrollTop = area.scrollHeight
+  return id
+}
+function removeTyping(id) { document.getElementById(id)?.remove() }
+function hideWelcome() { const w = document.getElementById('welcome'); if(w) w.style.display='none' }
+
+function appendRagBadge(rag) {
+  const area = document.getElementById('messages')
+  if (!area) return
+  const div = document.createElement('div')
+  div.className = 'rag-msg-badge'
+  div.innerHTML = `<i class="fa-solid fa-database"></i> RAG: ${rag.chunks_used} trechos de ${rag.total_chunks} · relevâncias: ${(rag.scores||[]).map(s=>(s*100).toFixed(0)+'%').join(', ')}`
+  area.appendChild(div)
+  area.scrollTop = area.scrollHeight
+}
+
+// ── Markdown simples ───────────────────────────────────────────
+function renderMD(raw) {
+  let h = esc(raw)
+  h = h.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+  h = h.replace(/\*(.*?)\*/g, '<em>$1</em>')
+  h = h.replace(/`([^`]+)`/g, '<code>$1</code>')
+  h = h.replace(/^&gt;\s?(.+)$/gm, '<blockquote>$1</blockquote>')
+  h = h.replace(/^###\s(.+)$/gm, '<h3>$1</h3>')
+  h = h.replace(/^##\s(.+)$/gm,  '<h3>$1</h3>')
+  h = h.replace(/^[-•]\s(.+)$/gm, '<li>$1</li>')
+  h = h.replace(/(<li>.*?<\/li>\n?)+/gs, m => `<ul>${m}</ul>`)
+  h = h.replace(/\n\n+/g, '</p><p>')
+  h = h.replace(/\n/g, '<br/>')
+  return `<p>${h}</p>`
+}
+
+// ── Sidebar ───────────────────────────────────────────────────
+function toggleSidebar() { document.getElementById('sidebar')?.classList.toggle('open') }
+
+// ── Actions ───────────────────────────────────────────────────
+function clearChat() {
+  S.history = []
+  const area = document.getElementById('messages')
+  if (area) area.innerHTML = `
+    <div class="welcome" id="welcome">
+      <div class="welcome-icon">💬</div>
+      <h2>Conversa reiniciada</h2>
+      <p>Faça uma nova pergunta sobre o livro.</p>
+    </div>`
+}
+
+function newBook() {
+  if (!confirm('Carregar outro livro? A conversa atual será perdida.')) return
+  S.bookId = ''; S.bookTitle = ''; S.history = []; S.file = null
+  clearFile()
+  document.getElementById('inp-pdfurl').value = ''
+  document.getElementById('inp-title').value  = ''
+  clearChat()
+  goTo('screen-upload')
+}
+
+// ── Toast ──────────────────────────────────────────────────────
+let _toastTimer = null
+function showToast(msg, type = 'err') {
+  const el  = document.getElementById('toast')
+  const mel = document.getElementById('toast-msg')
+  if (!el || !mel) return
+  mel.textContent = msg
+  el.className = `toast ${type} show`
+  if (_toastTimer) clearTimeout(_toastTimer)
+  _toastTimer = setTimeout(() => el.classList.remove('show'), 4500)
+}
+
+// ── Utils ──────────────────────────────────────────────────────
+function esc(s) {
+  return String(s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#039;')
+}
+function fmtSize(b) {
+  if (b < 1024) return b + ' B'
+  if (b < 1048576) return (b/1024).toFixed(1) + ' KB'
+  return (b/1048576).toFixed(2) + ' MB'
+}
+function fmtNum(n)  { return (n||0).toLocaleString('pt-BR') }
+function fmtTime(d) { return d.toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' }) }
+</script>
+</body>
+</html>
